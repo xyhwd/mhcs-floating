@@ -178,11 +178,14 @@ android.api = 30
 
 # (str) The Android NDK version to use. This should be your
 # *target* NDK version.
-android.ndk = 23b
+android.ndk = 21.4.7075529
 
 # (int) The Android SDK version to use. This should be your
 # *target* SDK version.
 android.sdk = 30
+
+# (str) Android build tools version to use
+android.build_tools = 30.0.3
 
 # (str) The Android NDK directory (if empty, it will be automatically downloaded.)
 #android.ndk_dir =
