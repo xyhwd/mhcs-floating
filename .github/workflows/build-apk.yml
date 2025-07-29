@@ -1,0 +1,165 @@
+name: Build Floating Window APK
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Set up Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '11'
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          git \
+          python3-dev \
+          python3-pip \
+          python3-setuptools \
+          python3-wheel \
+          libssl-dev \
+          libffi-dev \
+          libxml2-dev \
+          libxslt1-dev \
+          libjpeg-dev \
+          libpng-dev \
+          zlib1g-dev \
+          autotools-dev \
+          autoconf \
+          libtool \
+          pkg-config \
+          libncurses5-dev \
+          libncursesw5-dev \
+          libtinfo5 \
+          cmake
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install buildozer cython kivy numpy pillow opencv-python
+
+    - name: Cache Buildozer global directory
+      uses: actions/cache@v3
+      with:
+        path: .buildozer_global
+        key: buildozer-global-${{ hashFiles('buildozer.spec') }}
+
+    - name: Cache Buildozer directory
+      uses: actions/cache@v3
+      with:
+        path: .buildozer
+        key: buildozer-${{ hashFiles('buildozer.spec') }}
+
+    - name: Verify project files
+      run: |
+        echo "Checking project files..."
+        ls -la
+        echo "Checking floating_main.py..."
+        if [ -f "floating_main.py" ]; then
+          echo "✓ floating_main.py found"
+        else
+          echo "✗ floating_main.py not found"
+          exit 1
+        fi
+        echo "Checking mobile_game_engine.py..."
+        if [ -f "mobile_game_engine.py" ]; then
+          echo "✓ mobile_game_engine.py found"
+        else
+          echo "✗ mobile_game_engine.py not found"
+          exit 1
+        fi
+        echo "Checking buildozer.spec..."
+        if [ -f "buildozer.spec" ]; then
+          echo "✓ buildozer.spec found"
+        else
+          echo "✗ buildozer.spec not found"
+          exit 1
+        fi
+
+    - name: Create model directory
+      run: |
+        mkdir -p model
+        if [ ! -f "model/best.pt" ]; then
+          echo "Creating empty model file..."
+          touch model/best.pt
+        fi
+
+    - name: Build with Buildozer
+      run: |
+        # Accept Android SDK licenses
+        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
+        # Build the APK
+        buildozer android debug
+
+    - name: List build output
+      run: |
+        echo "Build completed. Checking output..."
+        ls -la
+        if [ -d "bin" ]; then
+          echo "bin directory contents:"
+          ls -la bin/
+        else
+          echo "bin directory not found"
+        fi
+
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: mhcs-floating-apk
+        path: bin/*.apk
+        if-no-files-found: error
+
+    - name: Create Release
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: floating-v${{ github.run_number }}
+        name: 满汉助手悬浮窗版本 v${{ github.run_number }}
+        body: |
+          ## 满汉助手悬浮窗版本
+
+          ### 特性
+          - 🎯 极简悬浮窗界面 (180x120像素)
+          - ✅ 完整保留原版算法
+          - 🎮 一键开始/暂停控制
+          - 📊 实时状态显示
+          - 📱 自适应手机分辨率
+
+          ### 使用方法
+          1. 下载并安装APK
+          2. 启用无障碍服务权限
+          3. 打开游戏，点击悬浮窗"开始"按钮
+          4. 享受自动化游戏体验
+
+          ### 注意事项
+          - 需要Android 5.0+
+          - 建议设备RAM ≥ 2GB
+          - 请合理使用，遵守游戏服务条款
+        files: bin/*.apk
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,22 @@
+# 满汉助手 Android版本依赖包
+
+# 核心框架
+kivy>=2.1.0
+kivymd>=1.1.1
+
+# 图像处理
+numpy>=1.21.0
+opencv-python>=4.5.0
+Pillow>=8.0.0
+
+# 机器学习
+ultralytics>=8.0.0
+torch>=1.11.0
+torchvision>=0.12.0
+
+# Android相关
+pyjnius>=1.4.0
+plyer>=2.1.0
+
+# 工具库
+requests>=2.25.0
